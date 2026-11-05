@@ -52,6 +52,16 @@ public class CameraController : MonoBehaviour
     [SerializeField] private float orbitSmoothness = 12f;
     [Tooltip("Скорость сглаживания зума")]
     [SerializeField] private float zoomSmoothness = 8f;
+    [Tooltip("Инерция движения WASD (больше = резче, меньше = плавнее)")]
+    [SerializeField] private float moveSmoothness = 6f;
+
+    [Header("Границы карты")]
+    [Tooltip("Ограничивать камеру прямоугольником карты")]
+    [SerializeField] private bool useMapBounds = true;
+    [Tooltip("Центр карты (X, Z в мире)")]
+    [SerializeField] private Vector2 mapCenter = Vector2.zero;
+    [Tooltip("Размер карты в метрах (ширина, глубина)")]
+    [SerializeField] private Vector2 mapSize = new Vector2(2000f, 2000f);
 
     // Плоскость земли для всех рейкастов (y = 0)
     private static readonly Plane GroundPlane = new Plane(Vector3.up, Vector3.zero);
@@ -61,6 +71,8 @@ public class CameraController : MonoBehaviour
     private float targetPitch;
     // Накопленный коэффициент зума для плавного приближения
     private float pendingZoom = 1f;
+    // Сглаженный ввод движения — инерция WASD
+    private Vector2 moveInputSmoothed;
 
     private void Start()
     {
@@ -76,6 +88,19 @@ public class CameraController : MonoBehaviour
         HandleZoomToCursor();
         HandleOrbit();
         HandleMapDrag();
+    }
+
+    /// <summary>
+    /// Ограничение камеры границами карты — после всех обработчиков ввода.
+    /// </summary>
+    private void LateUpdate()
+    {
+        if (!useMapBounds) return;
+
+        Vector3 p = transform.position;
+        p.x = Mathf.Clamp(p.x, mapCenter.x - mapSize.x / 2f, mapCenter.x + mapSize.x / 2f);
+        p.z = Mathf.Clamp(p.z, mapCenter.y - mapSize.y / 2f, mapCenter.y + mapSize.y / 2f);
+        transform.position = p;
     }
 
     /// <summary>
@@ -99,27 +124,34 @@ public class CameraController : MonoBehaviour
         var mouse = Mouse.current;
         if (keyboard == null || mouse == null) return;
 
-        Vector2 input = Vector2.zero;
+        Vector2 rawInput = Vector2.zero;
 
         // Клавиатура
-        if (keyboard.wKey.isPressed || keyboard.upArrowKey.isPressed) input.y += 1f;
-        if (keyboard.sKey.isPressed || keyboard.downArrowKey.isPressed) input.y -= 1f;
-        if (keyboard.aKey.isPressed || keyboard.leftArrowKey.isPressed) input.x -= 1f;
-        if (keyboard.dKey.isPressed || keyboard.rightArrowKey.isPressed) input.x += 1f;
+        if (keyboard.wKey.isPressed || keyboard.upArrowKey.isPressed) rawInput.y += 1f;
+        if (keyboard.sKey.isPressed || keyboard.downArrowKey.isPressed) rawInput.y -= 1f;
+        if (keyboard.aKey.isPressed || keyboard.leftArrowKey.isPressed) rawInput.x -= 1f;
+        if (keyboard.dKey.isPressed || keyboard.rightArrowKey.isPressed) rawInput.x += 1f;
 
         // Edge scrolling — курсор у края экрана
-        if (edgeScrollEnabled && input == Vector2.zero)
+        if (edgeScrollEnabled && rawInput == Vector2.zero)
         {
             Vector2 pos = mouse.position.ReadValue();
-            if (pos.x < edgeSize) input.x -= 1f;
-            else if (pos.x > Screen.width - edgeSize) input.x += 1f;
-            if (pos.y < edgeSize) input.y -= 1f;
-            else if (pos.y > Screen.height - edgeSize) input.y += 1f;
+            if (pos.x < edgeSize) rawInput.x -= 1f;
+            else if (pos.x > Screen.width - edgeSize) rawInput.x += 1f;
+            if (pos.y < edgeSize) rawInput.y -= 1f;
+            else if (pos.y > Screen.height - edgeSize) rawInput.y += 1f;
         }
 
-        if (input == Vector2.zero) return;
+        // Инерция: сглаженный ввод догоняет сырой — разгон и плавная остановка
+        float smooth = 1f - Mathf.Exp(-moveSmoothness * Time.deltaTime);
+        moveInputSmoothed = Vector2.Lerp(moveInputSmoothed, rawInput, smooth);
+        if (moveInputSmoothed.sqrMagnitude < 0.0001f)
+        {
+            moveInputSmoothed = Vector2.zero;
+            return;
+        }
 
-        MoveRelative(input);
+        MoveRelative(moveInputSmoothed);
     }
 
     /// <summary>
