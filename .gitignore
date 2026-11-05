@@ -1,0 +1,111 @@
+# ==========================================
+# UNITY 6 — СТАНДАРТНЫЕ ИГНОРЫ
+# ==========================================
+
+# Автогенерируемые папки Unity
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Bb]ackup/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+[Mm]emoryCaptures/
+[Rr]ecordings/
+
+# Unity: кэш и мета-файлы
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+sysinfo.txt
+
+# Asset Store / Package Manager
+[AA]ssets/AssetStoreTools*
+[AA]ssets/Plugins/Editor/JetBrains*
+
+# Crash reports
+crashlytics-build.properties
+*.stackdump
+
+# ==========================================
+# IDE / РЕДАКТОРЫ
+# ==========================================
+
+# Visual Studio / Rider / VS Code
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+.idea/
+.vs/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# JetBrains Rider
+*.DotSettings.user
+
+# ==========================================
+# СЕКРЕТЫ И ОКРУЖЕНИЕ
+# ==========================================
+
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# ==========================================
+# ОС
+# ==========================================
+
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# ==========================================
+# БОЛЬШИЕ БИНАРНЫЕ ФАЙЛЫ (Git LFS рекомендуется)
+# ==========================================
+# Раскомментировать при подключении Git LFS:
+# *.fbx filter=lfs diff=lfs merge=lfs -text
+# *.FBX filter=lfs diff=lfs merge=lfs -text
+# *.png filter=lfs diff=lfs merge=lfs -text
+# *.psd filter=lfs diff=lfs merge=lfs -text
+# *.wav filter=lfs diff=lfs merge=lfs -text
+# *.mp3 filter=lfs diff=lfs merge=lfs -text
+# *.aif filter=lfs diff=lfs merge=lfs -text
+# *.tga filter=lfs diff=lfs merge=lfs -text
+# *.exr filter=lfs diff=lfs merge=lfs -text
+# *.hdr filter=lfs diff=lfs merge=lfs -text
+
+# Временное решение без LFS — игнорировать архивы и билды
+*.apk
+*.aab
+*.exe
+*.zip
+*.rar
+*.7z
+
+# ==========================================
+# AI WORKSPACE — СЛУЖЕБНОЕ
+# ==========================================
+# _ai_workspace коммитится — это память проекта
+# Но временные файлы AI не коммитим
+_ai_workspace/.cache/
+_ai_workspace/*.tmp
+_ai_workspace/*.bak
