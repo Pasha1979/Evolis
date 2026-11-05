@@ -7,6 +7,7 @@ description: Запуск новой сессии работы над Evolis
 При вызове этого workflow выполни:
 
 1. Прочитай в строгом порядке:
+   - `_ai_workspace/🧠_SESSION_CONTEXT.md` (восстановление контекста — ПЕРВЫМ)
    - `_ai_workspace/🧠_МОЗГ_ПРОЕКТА.md`
    - `_ai_workspace/📊_ТЕКУЩИЙ_СТАТУС.md`
    - `_ai_workspace/🔗_НЕЙРОННЫЕ_СВЯЗИ.md`
