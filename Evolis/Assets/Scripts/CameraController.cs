@@ -47,8 +47,28 @@ public class CameraController : MonoBehaviour
     [Tooltip("Чувствительность перетаскивания (мировых единиц на пиксель, на высоте 50 м)")]
     [SerializeField] private float dragSensitivity = 0.05f;
 
+    [Header("Плавность")]
+    [Tooltip("Скорость сглаживания вращения (больше = резче, меньше = плавнее)")]
+    [SerializeField] private float orbitSmoothness = 12f;
+    [Tooltip("Скорость сглаживания зума")]
+    [SerializeField] private float zoomSmoothness = 8f;
+
     // Плоскость земли для всех рейкастов (y = 0)
     private static readonly Plane GroundPlane = new Plane(Vector3.up, Vector3.zero);
+
+    // Целевые значения для плавной орбиты (камера «долетает», а не дёргается)
+    private float targetYaw;
+    private float targetPitch;
+    // Накопленный коэффициент зума для плавного приближения
+    private float pendingZoom = 1f;
+
+    private void Start()
+    {
+        // Инициализируем целевые углы из текущего положения камеры в сцене
+        Vector3 euler = transform.eulerAngles;
+        targetYaw = euler.y;
+        targetPitch = euler.x > 180f ? euler.x - 360f : euler.x;
+    }
 
     private void Update()
     {
@@ -131,18 +151,26 @@ public class CameraController : MonoBehaviour
         if (mouse == null || cam == null) return;
 
         float scrollY = mouse.scroll.ReadValue().y;
-        if (Mathf.Approximately(scrollY, 0f)) return;
 
-        // Точка на земле под курсором
+        // Накапливаем желаемый зум — применим плавно ниже
+        if (!Mathf.Approximately(scrollY, 0f))
+            pendingZoom *= scrollY > 0f ? zoomFactor : 1f / zoomFactor;
+
+        if (Mathf.Approximately(pendingZoom, 1f)) return;
+
+        // Точка на земле под курсором (пересчитываем каждый кадр —
+        // зум следует за мышью, даже если та сдвинулась)
         Ray ray = cam.ScreenPointToRay(mouse.position.ReadValue());
         if (!GroundPlane.Raycast(ray, out float enter)) return;
         Vector3 hitPoint = ray.GetPoint(enter);
 
-        // Масштабируем вектор от точки до камеры
-        float factor = scrollY > 0f ? zoomFactor : 1f / zoomFactor;
-        Vector3 newPosition = hitPoint + (transform.position - hitPoint) * factor;
+        // Применяем часть накопленного зума — плавное приближение
+        float smooth = 1f - Mathf.Exp(-zoomSmoothness * Time.deltaTime);
+        float applied = Mathf.Lerp(1f, pendingZoom, smooth);
+        pendingZoom /= applied;
+        if (Mathf.Abs(pendingZoom - 1f) < 0.001f) pendingZoom = 1f;
 
-        // Ограничиваем по высоте
+        Vector3 newPosition = hitPoint + (transform.position - hitPoint) * applied;
         newPosition.y = Mathf.Clamp(newPosition.y, minHeight, maxHeight);
         transform.position = newPosition;
     }
@@ -160,19 +188,29 @@ public class CameraController : MonoBehaviour
         var cam = GetComponent<Camera>();
         if (mouse == null || keyboard == null || cam == null) return;
 
-        float yawDelta = 0f;
-        float pitchDelta = 0f;
-
+        // Ввод сразу идёт в ЦЕЛЕВЫЕ углы — сами углы догоняем плавно ниже
         if (mouse.rightButton.isPressed)
         {
             Vector2 delta = mouse.delta.ReadValue();
-            yawDelta = delta.x * rotateSensitivity;
-            pitchDelta = -delta.y * rotateSensitivity;
+            targetYaw += delta.x * rotateSensitivity;
+            targetPitch -= delta.y * rotateSensitivity;
         }
-        if (keyboard.qKey.isPressed) yawDelta -= rotateKeySpeed * Time.deltaTime;
-        if (keyboard.eKey.isPressed) yawDelta += rotateKeySpeed * Time.deltaTime;
+        if (keyboard.qKey.isPressed) targetYaw -= rotateKeySpeed * Time.deltaTime;
+        if (keyboard.eKey.isPressed) targetYaw += rotateKeySpeed * Time.deltaTime;
 
-        if (Mathf.Approximately(yawDelta, 0f) && Mathf.Approximately(pitchDelta, 0f)) return;
+        targetPitch = Mathf.Clamp(targetPitch, minPitch, maxPitch);
+
+        // Текущие углы
+        Vector3 euler = transform.eulerAngles;
+        float pitch = euler.x > 180f ? euler.x - 360f : euler.x;
+
+        // Плавное догоняние: экспоненциальное сглаживание кадро-независимо
+        float smooth = 1f - Mathf.Exp(-orbitSmoothness * Time.deltaTime);
+        float newYaw = Mathf.LerpAngle(euler.y, targetYaw, smooth);
+        float newPitch = Mathf.Lerp(pitch, targetPitch, smooth);
+
+        // Если уже догнали цель и ввода нет — выходим, ничего не делаем
+        if (Mathf.Approximately(newYaw, euler.y) && Mathf.Approximately(newPitch, pitch)) return;
 
         // Фокус орбиты — точка на земле в центре экрана
         Ray centerRay = cam.ScreenPointToRay(new Vector3(Screen.width / 2f, Screen.height / 2f, 0f));
@@ -180,13 +218,8 @@ public class CameraController : MonoBehaviour
         Vector3 focus = centerRay.GetPoint(enter);
 
         float distance = Vector3.Distance(transform.position, focus);
-        Vector3 euler = transform.eulerAngles;
 
-        float pitch = euler.x > 180f ? euler.x - 360f : euler.x;
-        float newPitch = Mathf.Clamp(pitch + pitchDelta, minPitch, maxPitch);
-        float newYaw = euler.y + yawDelta;
-
-        // Пересчитываем позицию: орбита вокруг фокуса на том же расстоянии
+        // Орбита вокруг фокуса на том же расстоянии
         Quaternion rotation = Quaternion.Euler(newPitch, newYaw, 0f);
         transform.position = focus + rotation * Vector3.back * distance;
         transform.rotation = rotation;
