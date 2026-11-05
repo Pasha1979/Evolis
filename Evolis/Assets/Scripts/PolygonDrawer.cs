@@ -184,17 +184,24 @@ public class PolygonDrawer : MonoBehaviour
     {
         var verts3d = points.Select(p => p - Vector3.up * (lineHeight - 0.2f)).ToArray();
 
-        // Проекция на 2D (X,Z); при обходе по часовой — разворачиваем порядок
+        // Проекция на 2D (X,Z). Ear-clipping всегда идёт против часовой:
+        // если полигон обойдён по часовой — разворачиваем только ПОРЯДОК ОБХОДА,
+        // сами вершины и индексы остаются в исходном виде!
         var verts = verts3d.Select(p => new Vector2(p.x, p.z)).ToList();
         var order = Enumerable.Range(0, verts.Count).ToList();
         if (reversed) order.Reverse();
 
-        var triangles = Triangulate(verts, order);
+        var triangles = Triangulate(verts, order).ToList();
+
+        // В Unity передняя грань смотрит вверх при обходе ПО ЧАСОВОЙ (вид сверху).
+        // Ear-clipping выдаёт треугольники против часовой — переворачиваем каждый.
+        for (int i = 0; i < triangles.Count; i += 3)
+            (triangles[i + 1], triangles[i + 2]) = (triangles[i + 2], triangles[i + 1]);
 
         var mesh = new Mesh
         {
-            vertices = (reversed ? verts3d.Reverse() : verts3d).ToArray(),
-            triangles = triangles,
+            vertices = verts3d, // исходный порядок — индексы ссылаются именно на него
+            triangles = triangles.ToArray(),
             normals = Enumerable.Repeat(Vector3.up, verts.Count).ToArray()
         };
 
