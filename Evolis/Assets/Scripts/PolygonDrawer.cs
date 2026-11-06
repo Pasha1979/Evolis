@@ -17,6 +17,21 @@ using UnityEngine.Rendering;
 /// </summary>
 public class PolygonDrawer : MonoBehaviour
 {
+    /// <summary>Типы зон — основа будущего зонирования (см. GDD 3.1).</summary>
+    public enum ZoneType { Residential, Religious, Agricultural }
+
+    /// <summary>Текущий тип зоны — меняется клавишами 1/2/3 или в Inspector.</summary>
+    [Header("Тип зоны")]
+    public ZoneType currentZoneType = ZoneType.Residential;
+
+    // Цвета типов зон (совпадают с линией/маркерами/заливкой)
+    private static readonly Dictionary<ZoneType, Color> ZoneColors = new()
+    {
+        { ZoneType.Residential,  new Color(0.7f, 0.7f, 0.7f) }, // серый
+        { ZoneType.Religious,    new Color(1.0f, 0.84f, 0.0f) }, // золотой
+        { ZoneType.Agricultural, new Color(0.2f, 0.8f, 0.2f) }  // зелёный
+    };
+
     [Header("Визуализация")]
     [SerializeField] private float lineWidth = 0.6f;
     [SerializeField] private Color lineColor = Color.yellow;
@@ -55,9 +70,13 @@ public class PolygonDrawer : MonoBehaviour
         lineRenderer.endWidth = lineWidth;
         lineRenderer.positionCount = 0;
 
+        // Базовый материал белый — цвет задаём через vertex colors (startColor/endColor),
+        // иначе смена материала перекрасила бы ВСЕ зоны сразу
         var lineMat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
-        lineMat.SetColor("_BaseColor", lineColor);
+        lineMat.SetColor("_BaseColor", Color.white);
         lineRenderer.sharedMaterial = lineMat;
+        lineRenderer.startColor = lineColor;
+        lineRenderer.endColor = lineColor;
 
         // Полупрозрачный материал заливки зоны
         fillMaterial = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
@@ -81,10 +100,39 @@ public class PolygonDrawer : MonoBehaviour
             HandleClick(groundPoint.Value);
 
         var keyboard = Keyboard.current;
-        if (keyboard != null && keyboard.cKey.wasPressedThisFrame)
-            ResetDrawing();
+        if (keyboard != null)
+        {
+            HandleZoneTypeInput(keyboard);
+            if (keyboard.cKey.wasPressedThisFrame) ResetDrawing();
+        }
 
         UpdateVisual(groundPoint);
+    }
+
+    /// <summary>
+    /// Переключение типа зоны клавишами 1/2/3 (новый Input System).
+    /// </summary>
+    private void HandleZoneTypeInput(Keyboard keyboard)
+    {
+        if (keyboard.digit1Key.wasPressedThisFrame) SetZoneType(ZoneType.Residential);
+        else if (keyboard.digit2Key.wasPressedThisFrame) SetZoneType(ZoneType.Religious);
+        else if (keyboard.digit3Key.wasPressedThisFrame) SetZoneType(ZoneType.Agricultural);
+    }
+
+    /// <summary>
+    /// Меняет тип зоны и цвет линии-превью.
+    /// </summary>
+    private void SetZoneType(ZoneType type)
+    {
+        if (currentZoneType == type) return;
+        currentZoneType = type;
+
+        Color c = ZoneColors[type];
+        lineRenderer.startColor = c;
+        lineRenderer.endColor = c;
+        lineColor = c;
+
+        Debug.Log($"[PolygonDrawer] Тип зоны переключён: {type}");
     }
 
     /// <summary>
@@ -130,10 +178,14 @@ public class PolygonDrawer : MonoBehaviour
         marker.transform.position = elevated;
         marker.transform.localScale = Vector3.one * markerRadius * 2f;
         Destroy(marker.GetComponent<Collider>()); // маркер не должен ловить рейкасты
-        marker.GetComponent<Renderer>().sharedMaterial = lineRenderer.sharedMaterial;
+
+        // Маркеру — свой экземпляр материала с цветом ТЕКУЩЕГО типа зоны
+        var markerMat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+        markerMat.SetColor("_BaseColor", ZoneColors[currentZoneType]);
+        marker.GetComponent<Renderer>().sharedMaterial = markerMat;
         markers.Add(marker);
 
-        Debug.Log($"[PolygonDrawer] Точка {points.Count}: {point}");
+        Debug.Log($"[PolygonDrawer] Добавлена точка в зону типа: {currentZoneType}, Всего точек: {points.Count}");
     }
 
     /// <summary>
@@ -146,7 +198,14 @@ public class PolygonDrawer : MonoBehaviour
         float absArea = Mathf.Abs(area);
 
         zoneCount++;
-        var zone = new GameObject($"Zone_{zoneCount}");
+        var zone = new GameObject($"Zone_{zoneCount}_{currentZoneType}");
+
+        // Зона запоминает свой тип и параметры — основа данных зон
+        var info = zone.AddComponent<ZoneInfo>();
+        info.zoneType = currentZoneType;
+        info.area = absArea;
+        info.vertexCount = points.Count;
+
         BuildFill(zone, area < 0f);
         BuildOutline(zone);
 
@@ -207,8 +266,14 @@ public class PolygonDrawer : MonoBehaviour
 
         var mf = zone.AddComponent<MeshFilter>();
         mf.sharedMesh = mesh;
+
+        // Заливка — экземпляр материала с цветом типа зоны (альфа 0.25)
         var mr = zone.AddComponent<MeshRenderer>();
-        mr.sharedMaterial = fillMaterial;
+        var zoneMat = new Material(fillMaterial);
+        Color fill = ZoneColors[currentZoneType];
+        fill.a = fillColor.a;
+        zoneMat.SetColor("_BaseColor", fill);
+        mr.sharedMaterial = zoneMat;
     }
 
     /// <summary>
@@ -271,6 +336,8 @@ public class PolygonDrawer : MonoBehaviour
         lr.startWidth = lineWidth;
         lr.endWidth = lineWidth;
         lr.sharedMaterial = lineRenderer.sharedMaterial;
+        lr.startColor = lineColor;
+        lr.endColor = lineColor;
         lr.positionCount = points.Count;
         for (int i = 0; i < points.Count; i++)
             lr.SetPosition(i, points[i]);
