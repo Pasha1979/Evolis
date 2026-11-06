@@ -35,14 +35,14 @@
 ### Метаданные
 ```yaml
 session_date: "2026-11-06"
-focus: "Фаза 1: Этап 1.3 ✅ — типы зон (1/2/3) + ZoneInfo. GDD 3.2.1 религия зафиксирована"
-last_commit: "3869d20"
+focus: "Фаза 1: Этапы 1.1-1.4 ✅ — камера CS2, зоны с типами, сетка участков (парцеллы)"
+last_commit: "a7342ac"
 phase: "Фаза 0 + Фаза 1 (параллельно)"
 ```
 
 ### Текущая задача
 ```yaml
-status: "✅ Этап 1.3: ZoneType enum, клавиши 1/2/3, vertex colors, ZoneInfo.cs (тип+площадь+вершины на зоне). Ждёт проверки в Unity. Следующее: Этап 1.4 (сетка участков) или GDD раздел 5. Задача 0.4 (исследование конкурентов) добавлена в план"
+status: "✅ Этап 1.4: ZonePlotGenerator (bbox→сетка→point-in-polygon) + PlotInfo на каждом Plot_ZoneN_PlotM + отладочные quads. Ждёт проверки в Unity. Скрипты: PolygonDrawer(ZoneType 1/2/3, ZoneInfo), ZonePlotGenerator, PlotInfo, CameraController, PrototypeBootstrap. Следующее: спавн зданий/дороги или GDD/конкуренты"
 ```
 
 ### Сделано в этой сессии:

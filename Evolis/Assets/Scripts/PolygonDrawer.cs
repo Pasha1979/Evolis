@@ -209,6 +209,9 @@ public class PolygonDrawer : MonoBehaviour
         BuildFill(zone, area < 0f);
         BuildOutline(zone);
 
+        // Сетка участков внутри зоны (Этап 1.4)
+        zone.AddComponent<ZonePlotGenerator>().Generate(new List<Vector3>(points), zoneCount);
+
         // Маркеры переезжают в объект зоны вместо удаления
         foreach (var marker in markers) marker.transform.SetParent(zone.transform);
         markers.Clear();
