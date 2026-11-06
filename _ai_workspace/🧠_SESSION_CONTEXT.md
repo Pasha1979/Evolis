@@ -35,14 +35,14 @@
 ### Метаданные
 ```yaml
 session_date: "2026-11-06"
-focus: "Фаза 1: Этапы 1.1-1.4 ✅ — камера CS2, зоны с типами, сетка участков (парцеллы)"
-last_commit: "a7342ac"
+focus: "Этапы 1.1-1.4 ✅ + исследование конкурентов ✅. 30 идей в реестре"
+last_commit: "db81af8"
 phase: "Фаза 0 + Фаза 1 (параллельно)"
 ```
 
 ### Текущая задача
 ```yaml
-status: "✅ Этап 1.4: ZonePlotGenerator (bbox→сетка→point-in-polygon) + PlotInfo на каждом Plot_ZoneN_PlotM + отладочные quads. Ждёт проверки в Unity. Скрипты: PolygonDrawer(ZoneType 1/2/3, ZoneInfo), ZonePlotGenerator, PlotInfo, CameraController, PrototypeBootstrap. Следующее: спавн зданий/дороги или GDD/конкуренты"
+status: "✅ Задача 0.4: competitors_analysis.md создан (Anno/CS2/ManorLords/CK3, гибридная прозрачность, 3 уровня агентов, диалоги с владельцами). Следующее: спавн зданий на парцеллах / GDD разделы 5-12 / задача 0.1.7-0.1.8"
 ```
 
 ### Сделано в этой сессии:
